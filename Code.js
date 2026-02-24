@@ -210,16 +210,10 @@ function recordTimestamp(payload) {
     userAgent
   ]);
 
-  // 今月の出勤回数を計算（今回の分も含む）
-  let attendanceCount = 0;
-  if (payload.type === 'in') {
-    attendanceCount = getMonthlyAttendanceCount(payload.uuid);
-  }
-
   // メッセージ生成
   let message = '';
   if (payload.type === 'in') {
-    message = `おかえり！ (今月${attendanceCount}回目の出勤)`;
+    message = 'おかえり！';
   } else if (payload.type === 'out') {
     message = 'お疲れ！またね！';
   } else {
@@ -229,43 +223,7 @@ function recordTimestamp(payload) {
   return {
     ok: true,
     timestamp: Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
-    message: message,
-    attendanceCount: attendanceCount
+    message: message
   };
 }
 
-/**
- * 指定UUIDの今月の出勤回数を取得
- * @param {string} uuid 
- * @return {number}
- */
-function getMonthlyAttendanceCount(uuid) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(TIMESTAMP_SHEET_NAME);
-  if (!sheet) return 0;
-
-  const values = sheet.getDataRange().getValues();
-  // ヘッダー行を除く
-  // 列定義: 0:timestamp, 1:uuid, 4:type (in/out)
-
-  if (values.length <= 1) return 0;
-
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
-
-  let count = 0;
-  for (let i = 1; i < values.length; i++) {
-    const row = values[i];
-    const ts = new Date(row[0]);
-    const rowUuid = String(row[1]);
-    const type = String(row[4]);
-
-    if (rowUuid === uuid && type === 'in') {
-      if (ts.getFullYear() === currentYear && ts.getMonth() === currentMonth) {
-        count++;
-      }
-    }
-  }
-  return count;
-}

@@ -530,11 +530,11 @@
 
         const script = document.createElement('script');
 
-        // タイムアウト処理 (15秒)
+        // タイムアウト処理 (30秒)
         const timeoutId = setTimeout(() => {
           cleanup();
           reject(new Error('通信タイムアウトが発生しました。GASのデプロイURLが正しいか確認してください。'));
-        }, 15000);
+        }, 30000);
 
         function cleanup() {
           clearTimeout(timeoutId);
