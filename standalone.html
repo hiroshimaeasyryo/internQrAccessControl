@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>KANPAI Hütte 入退室記録 (Standalone)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            /* Colors */
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --success: #10B981;
+            --error: #EF4444;
+            --bg: #F9FAFB;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-sub: #6B7280;
+            --border: #E5E7EB;
+
+            /* Spacing */
+            --gap: 16px;
+
+            /* Radius */
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            width: 100vw !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 40px;
+        }
+
+        .container {
+            width: 100% !important;
+            max-width: 420px;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+
+        header span {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .card.active {
+            border-color: var(--primary);
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06);
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-title.active {
+            color: var(--primary);
+        }
+
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .refresh-btn:hover {
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .refresh-btn.spinning i {
+            animation: spin 1s linear infinite;
+        }
+
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .staff-btn {
+            background: #F3F4F6;
+            border: 2px solid transparent;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .staff-btn:active {
+            transform: scale(0.98);
+        }
+
+        .staff-btn.selected {
+            background: #EEF2FF;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #D1D5DB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar.bg-1 {
+            background-color: #6366F1;
+        }
+
+        .avatar.bg-2 {
+            background-color: #EC4899;
+        }
+
+        .avatar.bg-3 {
+            background-color: #10B981;
+        }
+
+        .avatar.bg-4 {
+            background-color: #F59E0B;
+        }
+
+        .avatar.bg-5 {
+            background-color: #3B82F6;
+        }
+
+        .birth-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.5rem;
+            letter-spacing: 4px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            transition: border-color 0.2s;
+            appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        .birth-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .birth-input::placeholder {
+            letter-spacing: 2px;
+            color: #D1D5DB;
+            font-size: 1.2rem;
+        }
+
+        .verify-feedback {
+            text-align: center;
+            margin-top: 12px;
+            min-height: 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .verify-feedback.loading {
+            color: var(--text-sub);
+        }
+
+        .verify-feedback.success {
+            color: var(--success);
+        }
+
+        .verify-feedback.error {
+            color: var(--error);
+        }
+
+        .type-switcher {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .type-btn {
+            padding: 20px 16px;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 12px;
+            font-weight: 700;
+            color: var(--text-sub);
+            text-align: center;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .type-btn:not(.active) {
+            animation: pulse 2.5s infinite ease-in-out;
+        }
+
+        .type-btn.active[data-type="in"] {
+            border-color: #10B981;
+            background-color: #ECFDF5;
+            color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        }
+
+        .type-btn.active[data-type="out"] {
+            border-color: #F59E0B;
+            background-color: #FFFBEB;
+            color: #D97706;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+        }
+
+        .type-icon {
+            font-size: 1.8rem;
+        }
+
+        .camera-box {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            top: 0;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .scan-line.active {
+            opacity: 1;
+            animation: scanAnim 2.5s infinite linear;
+        }
+
+        @keyframes scanAnim {
+            0% {
+                top: 0;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2);
+            }
+
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+            }
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(17, 24, 39, 0.95);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #toast.success {
+            background: var(--success);
+        }
+
+        #toast.error {
+            background: var(--error);
+        }
+
+        .disabled-section {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(80%);
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #ddd;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>KANPAI Hütte</h1>
+            <span>Touchless Check-in</span>
+        </header>
+
+        <!-- STEP 1: SELECT STAFF -->
+        <section class="card active" id="sec-staff">
+            <div class="card-title active" style="justify-content: space-between;">
+                <span>STEP 1: スタッフ選択</span>
+                <button class="refresh-btn" id="refreshCacheBtn" title="キャッシュを更新" onclick="refreshStaffCache()">
+                    <i class="fa-solid fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="staff-grid" id="staffGrid">
+                <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);">
+                    <div class="spinner" style="border-top-color: var(--text-sub);"></div> 読み込み中...
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2: VERIFY -->
+        <section class="card disabled-section" id="sec-verify">
+            <div class="card-title">STEP 2: 本人確認</div>
+            <div style="text-align: center; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-sub);">
+                生年⽉⽇8桁を入⼒ (例: 19900101)
+            </div>
+            <div class="birth-input-container">
+                <input id="birthInput" type="tel" class="birth-input" placeholder="19900101" maxlength="8"
+                    inputmode="numeric" autocomplete="off" />
+            </div>
+            <div id="verifyFeedback" class="verify-feedback"></div>
+        </section>
+
+        <!-- STEP 3: SCAN -->
+        <section class="card disabled-section" id="sec-scan">
+            <div class="card-title">STEP 3: 打刻</div>
+
+            <div class="type-switcher" id="typeSwitcher">
+                <div class="type-btn" data-type="in" onclick="selectType('in')">
+                    <span class="type-icon"><i class="fa-solid fa-door-open"></i></span>
+                    <span>入室</span>
+                </div>
+                <div class="type-btn" data-type="out" onclick="selectType('out')">
+                    <span class="type-icon"><i class="fa-solid fa-door-closed"></i></span>
+                    <span>退室</span>
+                </div>
+            </div>
+
+            <div class="camera-box">
+                <video id="video" autoplay muted playsinline></video>
+                <div class="scan-line" id="scanLine"></div>
+            </div>
+            <div id="scanStatus" style="text-align: center; margin-top: 12px; font-weight: bold; height: 1.2em;"></div>
+        </section>
+    </div>
+
+    <div id="toast">
+        <span id="toastIcon"></span>
+        <span id="toastMsg"></span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script>
+        /**
+         * 設定: GASのウェブアプリのURL
+         * デプロイしたWebアプリのURLをここに貼り付けてください
+         */
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyhQTmJkmWnft-ZkjmL9zLylmvlkrpTxXFZlnfDICvFqZ5hJMo8DUyK-K2LflGgsulW/exec";
+
+        // URLパラメータから placeId を取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const placeId = urlParams.get('place') || '';
+
+        /**
+         * GASと通信するヘルパー関数 (JSONPを使用: CORS制限を回避)
+         */
+        function callGas(action, params = {}) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'gasCallback_' + Math.random().toString(36).substr(2, 9);
+                const url = new URL(GAS_URL);
+                url.searchParams.append('action', action);
+                url.searchParams.append('callback', callbackName);
+                for (const [key, val] of Object.entries(params)) {
+                    url.searchParams.append(key, typeof val === 'object' ? JSON.stringify(val) : val);
+                }
+
+                const script = document.createElement('script');
+
+                // タイムアウト処理 (15秒)
+                const timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('通信タイムアウトが発生しました。GASのデプロイURLが正しいか確認してください。'));
+                }, 15000);
+
+                function cleanup() {
+                    clearTimeout(timeoutId);
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                }
+
+                window[callbackName] = (data) => {
+                    cleanup();
+                    resolve(data);
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('通信エラーが発生しました(CORS/Network)。URLが正しいか、GASが公開されているか確認してください。'));
+                };
+
+                script.src = url.toString();
+                document.body.appendChild(script);
+            });
+        }
+
+        // UI Refs
+        const secStaff = document.getElementById('sec-staff');
+        const secVerify = document.getElementById('sec-verify');
+        const secScan = document.getElementById('sec-scan');
+        const staffGrid = document.getElementById('staffGrid');
+        const birthInput = document.getElementById('birthInput');
+        const verifyFeedback = document.getElementById('verifyFeedback');
+        const typeBtns = document.querySelectorAll('.type-btn');
+        const video = document.getElementById('video');
+        const scanLine = document.getElementById('scanLine');
+        const scanStatus = document.getElementById('scanStatus');
+
+        // State
+        let selectedStaffUuid = null;
+        let selectedStaffName = null;
+        let verified = false;
+        let selectedType = null;
+        let scanning = false;
+        let isVerifying = false;
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initStaffList();
+        });
+
+        // --- 1. Staff List ---
+        async function initStaffList() {
+            try {
+                const list = await callGas('getStaffList');
+                renderStaffList(list);
+            } catch (err) {
+                staffGrid.innerHTML = '<div style="color:red; grid-column:1/-1;">エラー: ' + err.message + '</div>';
+            }
+        }
+
+        function renderStaffList(list) {
+            staffGrid.innerHTML = '';
+            if (!list || list.length === 0) {
+                staffGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">スタッフが見つかりません</div>';
+                return;
+            }
+            list.forEach((staff) => {
+                const btn = document.createElement('div');
+                btn.className = 'staff-btn';
+                const avatar = document.createElement('div');
+                const colorIdx = (staff.name.charCodeAt(0) % 5) + 1;
+                avatar.className = 'avatar bg-' + colorIdx;
+
+                if (staff.img) {
+                    const match = staff.img.match(/[-\w]{25,}/);
+                    if (match) {
+                        const fileId = match[0];
+                        const img = document.createElement('img');
+                        img.src = 'https://lh3.google.com/u/0/d/' + fileId;
+                        img.onerror = function () {
+                            this.style.display = 'none';
+                            avatar.textContent = staff.name.charAt(0);
+                        };
+                        avatar.appendChild(img);
+                    } else {
+                        avatar.textContent = staff.name.charAt(0);
+                    }
+                } else {
+                    avatar.textContent = staff.name.charAt(0);
+                }
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = staff.name;
+                btn.appendChild(avatar);
+                btn.appendChild(nameSpan);
+                btn.onclick = () => selectStaff(staff.uuid, staff.name, btn);
+                staffGrid.appendChild(btn);
+            });
+        }
+
+        async function refreshStaffCache() {
+            const btn = document.getElementById('refreshCacheBtn');
+            btn.classList.add('spinning');
+            staffGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);"><div class="spinner"></div> キャッシュを更新中...</div>';
+
+            try {
+                const res = await callGas('clearStaffCache');
+                if (res.ok) {
+                    showToast('キャッシュを更新しました', 'success');
+                    const list = await callGas('getStaffList');
+                    btn.classList.remove('spinning');
+                    renderStaffList(list);
+                }
+            } catch (err) {
+                btn.classList.remove('spinning');
+                showToast('エラー: ' + err.message, 'error');
+            }
+        }
+
+        function selectStaff(uuid, name, btnEl) {
+            document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
+            btnEl.classList.add('selected');
+            selectedStaffUuid = uuid;
+            selectedStaffName = name;
+            verified = false;
+            birthInput.value = '';
+            verifyFeedback.textContent = '';
+            secScan.classList.add('disabled-section');
+            stopCamera();
+            secVerify.classList.remove('disabled-section');
+            scrollToEl(secVerify);
+            setTimeout(() => birthInput.focus(), 600);
+        }
+
+        birthInput.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            e.target.value = val;
+            if (val.length === 8 && !isVerifying) {
+                verify(val);
+                birthInput.blur();
+            }
+        });
+
+        async function verify(rawDate) {
+            if (!selectedStaffUuid) return;
+            const y = rawDate.substr(0, 4);
+            const m = rawDate.substr(4, 2);
+            const d = rawDate.substr(6, 2);
+            const formatted = y + '-' + m + '-' + d;
+
+            isVerifying = true;
+            verifyFeedback.textContent = '確認中...';
+            verifyFeedback.className = 'verify-feedback loading';
+
+            try {
+                const res = await callGas('verifyStaff', { uuid: selectedStaffUuid, birthdate: formatted });
+                isVerifying = false;
+                if (res.ok) {
+                    verified = true;
+                    verifyFeedback.textContent = 'OK: ' + res.name;
+                    verifyFeedback.className = 'verify-feedback success';
+                    secScan.classList.remove('disabled-section');
+                    scrollToEl(secScan);
+                    scanStatus.textContent = "「入室」または「退室」を選択してください";
+                } else {
+                    verifyFeedback.textContent = '生年月日が一致しません';
+                    verifyFeedback.className = 'verify-feedback error';
+                    birthInput.classList.add('error');
+                    setTimeout(() => birthInput.classList.remove('error'), 500);
+                }
+            } catch (err) {
+                isVerifying = false;
+                verifyFeedback.textContent = 'エラー: ' + err.message;
+                verifyFeedback.className = 'verify-feedback error';
+            }
+        }
+
+        window.selectType = function (type) {
+            selectedType = type;
+            typeBtns.forEach(btn => {
+                if (btn.dataset.type === type) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            if (!scanning) startCamera();
+        };
+
+        function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                scanStatus.textContent = "カメラが使えません";
+                return;
+            }
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then((stream) => {
+                    video.srcObject = stream;
+                    video.play();
+                    scanning = true;
+                    scanLine.classList.add('active');
+                    scanStatus.textContent = "QRコードを読み取ってください";
+                    requestAnimationFrame(tick);
+                })
+                .catch(err => {
+                    console.error("Camera Error:", err);
+                    scanStatus.textContent = "カメラエラー: " + err.name;
+                });
+        }
+
+        function stopCamera() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(t => t.stop());
+            }
+            scanning = false;
+            scanLine.classList.remove('active');
+        }
+
+        function tick() {
+            if (!scanning) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, canvas.width, canvas.height);
+                if (code) handleQrCode(code.data);
+            }
+            requestAnimationFrame(tick);
+        }
+
+        async function handleQrCode(qrData) {
+            scanning = false;
+            stopCamera();
+            scanStatus.textContent = "送信中...";
+
+            const payload = {
+                uuid: selectedStaffUuid,
+                name: selectedStaffName,
+                placeId: placeId,
+                type: selectedType,
+                qrValue: qrData
+            };
+
+            try {
+                const res = await callGas('recordTimestamp', { payload: payload });
+                if (res.ok) {
+                    showToast(res.message, 'success');
+                    scanStatus.textContent = "完了！";
+                    setTimeout(() => { resetApp(); }, 3000);
+                } else {
+                    showToast('打刻失敗', 'error');
+                    setTimeout(() => { scanning = true; startCamera(); }, 2000);
+                }
+            } catch (err) {
+                showToast('エラー: ' + err.message, 'error');
+            }
+        }
+
+        function scrollToEl(el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            const m = document.getElementById('toastMsg');
+            const i = document.getElementById('toastIcon');
+            m.textContent = msg;
+            t.className = type === 'success' ? 'success' : 'error';
+            i.innerHTML = type === 'success' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 4000);
+        }
+
+        function resetApp() {
+            selectedStaffUuid = null;
+            selectedStaffName = null;
+            verified = false;
+            scanning = false;
+            isVerifying = false;
+            selectedType = null;
+            secVerify.classList.add('disabled-section');
+            secScan.classList.add('disabled-section');
+            birthInput.value = '';
+            verifyFeedback.textContent = '';
+            verifyFeedback.className = 'verify-feedback';
+            scanStatus.textContent = '';
+            document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
+            typeBtns.forEach(btn => btn.classList.remove('active'));
+            stopCamera();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+
+</html>

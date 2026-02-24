@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>KANPAI Hütte 入退室記録</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <?!= include('styles'); ?>
+</head>
+
+<body>
+
+  <div class="container">
+    <header>
+      <h1>KANPAI Hütte</h1>
+      <span>Touchless Check-in</span>
+    </header>
+
+    <!-- STEP 1: SELECT STAFF -->
+    <section class="card active" id="sec-staff">
+      <div class="card-title active" style="justify-content: space-between;">
+        <span>STEP 1: スタッフ選択</span>
+        <button class="refresh-btn" id="refreshCacheBtn" title="キャッシュを更新" onclick="refreshStaffCache()">
+          <i class="fa-solid fa-sync-alt"></i>
+        </button>
+      </div>
+      <div class="staff-grid" id="staffGrid">
+        <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);">
+          <div class="spinner" style="border-top-color: var(--text-sub);"></div> 読み込み中...
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: VERIFY -->
+    <section class="card disabled-section" id="sec-verify">
+      <div class="card-title">STEP 2: 本人確認</div>
+      <div style="text-align: center; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-sub);">
+        生年⽉⽇8桁を入⼒ (例: 19900101)
+      </div>
+      <div class="birth-input-container">
+        <input id="birthInput" type="tel" class="birth-input" placeholder="19900101" maxlength="8" inputmode="numeric"
+          autocomplete="off" />
+      </div>
+      <div id="verifyFeedback" class="verify-feedback"></div>
+    </section>
+
+    <!-- STEP 3: SCAN -->
+    <section class="card disabled-section" id="sec-scan">
+      <div class="card-title">STEP 3: 打刻</div>
+
+      <div class="type-switcher" id="typeSwitcher">
+        <div class="type-btn" data-type="in" onclick="selectType('in')">
+          <span class="type-icon"><i class="fa-solid fa-door-open"></i></span>
+          <span>入室</span>
+        </div>
+        <div class="type-btn" data-type="out" onclick="selectType('out')">
+          <span class="type-icon"><i class="fa-solid fa-door-closed"></i></span>
+          <span>退室</span>
+        </div>
+      </div>
+
+      <div class="camera-box">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="scan-line" id="scanLine"></div>
+      </div>
+      <div id="scanStatus" style="text-align: center; margin-top: 12px; font-weight: bold; height: 1.2em;"></div>
+    </section>
+  </div>
+
+  <div id="toast">
+    <span id="toastIcon"></span>
+    <span id="toastMsg"></span>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script>
+    const placeId = '<?= placeId ?>';
+
+    // UI Refs
+    const secStaff = document.getElementById('sec-staff');
+    const secVerify = document.getElementById('sec-verify');
+    const secScan = document.getElementById('sec-scan');
+
+    const staffGrid = document.getElementById('staffGrid');
+    const birthInput = document.getElementById('birthInput');
+    const verifyFeedback = document.getElementById('verifyFeedback');
+
+    const typeBtns = document.querySelectorAll('.type-btn');
+    const video = document.getElementById('video');
+    const scanLine = document.getElementById('scanLine');
+    const scanStatus = document.getElementById('scanStatus');
+
+    // State
+    let selectedStaffUuid = null;
+    let selectedStaffName = null;
+    let verified = false;
+    let selectedType = null;
+    let scanning = false;
+    let isVerifying = false;
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      initStaffList();
+    });
+
+    // --- 1. Staff List ---
+    function initStaffList() {
+      google.script.run
+        .withSuccessHandler((list) => {
+          renderStaffList(list);
+        })
+        .withFailureHandler((err) => {
+          staffGrid.innerHTML = '<div style="color:red; grid-column:1/-1;">エラー: ' + err.message + '</div>';
+        })
+        .getStaffList();
+    }
+
+    function renderStaffList(list) {
+      staffGrid.innerHTML = '';
+      if (!list || list.length === 0) {
+        staffGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">スタッフが見つかりません</div>';
+        return;
+      }
+      list.forEach((staff, index) => {
+        const btn = document.createElement('div');
+        btn.className = 'staff-btn';
+
+        // Avatar Container
+        const avatar = document.createElement('div');
+        const colorIdx = (staff.name.charCodeAt(0) % 5) + 1;
+        avatar.className = 'avatar bg-' + colorIdx;
+
+        if (staff.img) {
+          const img = document.createElement('img');
+          // Extract ID from various Google Drive URL formats
+          // e.g., https://lh3.google.com/u/0/d/{ID}, https://drive.google.com/file/d/{ID}/view, etc.
+          const match = staff.img.match(/[-\w]{25,}/);
+          if (match) {
+            const fileId = match[0];
+            img.src = 'https://lh3.google.com/u/0/d/' + fileId;
+            img.onerror = function () {
+              this.style.display = 'none';
+              avatar.textContent = staff.name.charAt(0);
+            };
+            avatar.appendChild(img);
+          } else {
+            avatar.textContent = staff.name.charAt(0);
+          }
+        } else {
+          avatar.textContent = staff.name.charAt(0);
+        }
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = staff.name;
+
+        btn.appendChild(avatar);
+        btn.appendChild(nameSpan);
+
+        btn.onclick = () => selectStaff(staff.uuid, staff.name, btn);
+        staffGrid.appendChild(btn);
+      });
+    }
+
+    function refreshStaffCache() {
+      const btn = document.getElementById('refreshCacheBtn');
+      btn.classList.add('spinning');
+      staffGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);"><div class="spinner"></div> キャッシュを更新中...</div>';
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.ok) {
+            showToast('キャッシュを更新しました', 'success');
+            // キャッシュクリア後、再取得
+            google.script.run
+              .withSuccessHandler((list) => {
+                btn.classList.remove('spinning');
+                renderStaffList(list);
+              })
+              .withFailureHandler((err) => {
+                btn.classList.remove('spinning');
+                staffGrid.innerHTML = '<div style="color:red; grid-column:1/-1;">取得エラー: ' + err.message + '</div>';
+              })
+              .getStaffList();
+          }
+        })
+        .withFailureHandler((err) => {
+          btn.classList.remove('spinning');
+          showToast('エラー: ' + err.message, 'error');
+        })
+        .clearStaffCache();
+    }
+
+    function selectStaff(uuid, name, btnEl) {
+      // UI Update
+      document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
+      btnEl.classList.add('selected');
+
+      selectedStaffUuid = uuid;
+      selectedStaffName = name;
+
+      // Reset Verify State
+      verified = false;
+      birthInput.value = '';
+      verifyFeedback.textContent = '';
+      secScan.classList.add('disabled-section');
+      stopCamera();
+
+      // Enable Next Section & Scroll
+      secVerify.classList.remove('disabled-section');
+      scrollToEl(secVerify);
+
+      // Auto Focus
+      setTimeout(() => birthInput.focus(), 600);
+    }
+
+    // --- 2. Auto Verify ---
+    birthInput.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/[^0-9]/g, '');
+      e.target.value = val; // Enforce numbers
+
+      if (val.length === 8 && !isVerifying) {
+        verify(val);
+        birthInput.blur(); // Close keyboard
+      }
+    });
+
+    function verify(rawDate) {
+      if (!selectedStaffUuid) return;
+
+      // Format 19900101 -> 1990-01-01
+      const y = rawDate.substr(0, 4);
+      const m = rawDate.substr(4, 2);
+      const d = rawDate.substr(6, 2);
+      const formatted = y + '-' + m + '-' + d;
+
+      isVerifying = true;
+      verifyFeedback.textContent = '確認中...';
+      verifyFeedback.className = 'verify-feedback loading';
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          isVerifying = false;
+          if (res.ok) {
+            verified = true;
+            verifyFeedback.textContent = 'OK: ' + res.name;
+            verifyFeedback.className = 'verify-feedback success';
+
+            // Enable Scan Section
+            secScan.classList.remove('disabled-section');
+            scrollToEl(secScan);
+            scanStatus.textContent = "「入室」または「退室」を選択してください";
+
+          } else {
+            verifyFeedback.textContent = '生年月日が一致しません';
+            verifyFeedback.className = 'verify-feedback error';
+            // Slight shake effect?
+            birthInput.classList.add('error');
+            setTimeout(() => birthInput.classList.remove('error'), 500);
+          }
+        })
+        .withFailureHandler((err) => {
+          isVerifying = false;
+          verifyFeedback.textContent = 'エラー: ' + err.message;
+          verifyFeedback.className = 'verify-feedback error';
+        })
+        .verifyStaff(selectedStaffUuid, formatted);
+    }
+
+    // --- 3. Scan & Type ---
+    window.selectType = function (type) {
+      selectedType = type;
+      typeBtns.forEach(btn => {
+        if (btn.dataset.type === type) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+      // Start camera after type selection
+      if (!scanning) {
+        startCamera();
+      }
+    };
+
+    function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        scanStatus.textContent = "カメラが使えません";
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then((stream) => {
+          video.srcObject = stream;
+          video.play();
+          scanning = true;
+          scanLine.classList.add('active');
+          scanStatus.textContent = "QRコードを読み取ってください";
+          requestAnimationFrame(tick);
+        })
+        .catch(err => {
+          console.error("Camera Error:", err);
+          scanStatus.textContent = "カメラエラー: " + err.name + " (" + err.message + ")";
+        });
+    }
+
+    function stopCamera() {
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+      }
+      scanning = false;
+      scanLine.classList.remove('active');
+    }
+
+    function tick() {
+      if (!scanning) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+        if (code) {
+          handleQrCode(code.data);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function handleQrCode(qrData) {
+      scanning = false; // Pause
+      stopCamera();
+      scanStatus.textContent = "送信中...";
+
+      const payload = {
+        uuid: selectedStaffUuid,
+        name: selectedStaffName,
+        placeId: placeId,
+        type: selectedType,
+        qrValue: qrData
+      };
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.ok) {
+            showToast(res.message, 'success'); // "おかえり (5回目)" etc.
+            scanStatus.textContent = "完了！";
+
+            // Reset Flow after delay
+            setTimeout(() => {
+              resetApp();
+            }, 3000);
+
+          } else {
+            showToast('打刻失敗', 'error');
+            setTimeout(() => {
+              scanning = true;
+              startCamera();
+            }, 2000); // Retry logic
+          }
+        })
+        .withFailureHandler((err) => {
+          showToast('エラー: ' + err.message, 'error');
+        })
+        .recordTimestamp(payload);
+    }
+
+    // --- Helpers ---
+    function scrollToEl(el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      const m = document.getElementById('toastMsg');
+      const i = document.getElementById('toastIcon');
+
+      m.textContent = msg;
+      t.className = type === 'success' ? 'success' : 'error';
+      i.innerHTML = type === 'success' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-triangle-exclamation"></i>';
+      t.classList.add('show');
+
+      setTimeout(() => t.classList.remove('show'), 4000);
+    }
+
+    function resetApp() {
+      // 1. Reset State
+      selectedStaffUuid = null;
+      selectedStaffName = null;
+      verified = false;
+      scanning = false;
+      isVerifying = false;
+      selectedType = 'in';
+
+      // 2. Reset UI - Sections
+      secVerify.classList.add('disabled-section');
+      secScan.classList.add('disabled-section');
+
+      // 3. Reset UI - Inputs & Feedback
+      birthInput.value = '';
+      verifyFeedback.textContent = '';
+      verifyFeedback.className = 'verify-feedback';
+      scanStatus.textContent = '';
+
+      // 4. Reset UI - Buttons
+      document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
+      typeBtns.forEach(btn => btn.classList.remove('active'));
+
+      // 5. Camera
+      stopCamera();
+      scanLine.classList.remove('active');
+
+      // 6. Scroll to top
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  </script>
+</body>
+
+</html>
