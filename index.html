@@ -486,28 +486,15 @@
 
     <!-- STEP 1: SELECT STAFF -->
     <section class="card active" id="sec-staff">
-      <div class="card-title">行動指針</div>
-      <p class="guideline-hint">今日意識する指針を1つ選んでから、スタッフを選んでください。</p>
-      <div class="guideline-list" id="guidelineList">
-        <label class="guideline-option"><input type="radio" name="guideline" value="1"><span>感謝を、当たり前に: いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="2"><span>冷笑しない: 他人の挑戦を笑わない。尊敬を忘れず、人に向き合う。挑戦する勇気を尊重する。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="3"><span>相手以上に相手のことを考える: 相手の期待を超え続ける。おせっかいを恐れず、相手の未来を本気で考える。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="4"><span>自ら挑み、自ずから応援される: 主体的に、挑戦する。自らの志を目的とし、応援されることを目的としてはならない。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="5"><span>誠実かつ愚直に、貢献し続ける: 手を抜かず、真摯に向き合う。人の役に立つことに、本気であり続ける。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="6"><span>「こんなもんか」で終わらず、一歩前へ: 現状に満足せず、常に成長する。妥協を許さず、昨日の自分を超え続ける。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="7"><span>遊び心を大切に、今を生きる: 計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</span></label>
-      </div>
       <div class="card-title active" style="justify-content: space-between;">
         <span>STEP 1: スタッフ選択</span>
         <button class="refresh-btn" id="refreshCacheBtn" title="キャッシュを更新" onclick="refreshStaffCache()">
           <i class="fa-solid fa-sync-alt"></i>
         </button>
       </div>
-      <div id="staffSelectWrapper" class="disabled-section">
-        <div class="staff-grid" id="staffGrid">
-          <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);">
-            <div class="spinner" style="border-top-color: var(--text-sub);"></div> 読み込み中...
-          </div>
+      <div class="staff-grid" id="staffGrid">
+        <div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);">
+          <div class="spinner" style="border-top-color: var(--text-sub);"></div> 読み込み中...
         </div>
       </div>
     </section>
@@ -525,9 +512,24 @@
       <div id="verifyFeedback" class="verify-feedback"></div>
     </section>
 
-    <!-- STEP 3: SCAN -->
+    <!-- STEP 3: GUIDELINE -->
+    <section class="card disabled-section" id="sec-guideline">
+      <div class="card-title">STEP 3: 行動指針選択</div>
+      <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
+      <div class="guideline-list" id="guidelineList">
+        <label class="guideline-option"><input type="radio" name="guideline" value="1"><span>感謝を、当たり前に: いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</span></label>
+        <label class="guideline-option"><input type="radio" name="guideline" value="2"><span>冷笑しない: 他人の挑戦を笑わない。尊敬を忘れず、人に向き合う。挑戦する勇気を尊重する。</span></label>
+        <label class="guideline-option"><input type="radio" name="guideline" value="3"><span>相手以上に相手のことを考える: 相手の期待を超え続ける。おせっかいを恐れず、相手の未来を本気で考える。</span></label>
+        <label class="guideline-option"><input type="radio" name="guideline" value="4"><span>自ら挑み、自ずから応援される: 主体的に、挑戦する。自らの志を目的とし、応援されることを目的としてはならない。</span></label>
+        <label class="guideline-option"><input type="radio" name="guideline" value="5"><span>誠実かつ愚直に、貢献し続ける: 手を抜かず、真摯に向き合う。人の役に立つことに、本気であり続ける。</span></label>
+        <label class="guideline-option"><input type="radio" name="guideline" value="6"><span>「こんなもんか」で終わらず、一歩前へ: 現状に満足せず、常に成長する。妥協を許さず、昨日の自分を超え続ける。</span></label>
+        <label class="guideline-option"><input type="radio" name="guideline" value="7"><span>遊び心を大切に、今を生きる: 計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</span></label>
+      </div>
+    </section>
+
+    <!-- STEP 4: SCAN -->
     <section class="card disabled-section" id="sec-scan">
-      <div class="card-title">STEP 3: 打刻</div>
+      <div class="card-title">STEP 4: 打刻</div>
 
       <div class="type-switcher" id="typeSwitcher">
         <div class="type-btn" data-type="in" onclick="selectType('in')">
@@ -614,6 +616,7 @@
     // UI Refs
     const secStaff = document.getElementById('sec-staff');
     const secVerify = document.getElementById('sec-verify');
+    const secGuideline = document.getElementById('sec-guideline');
     const secScan = document.getElementById('sec-scan');
     const staffGrid = document.getElementById('staffGrid');
     const birthInput = document.getElementById('birthInput');
@@ -622,7 +625,6 @@
     const video = document.getElementById('video');
     const scanLine = document.getElementById('scanLine');
     const scanStatus = document.getElementById('scanStatus');
-    const staffSelectWrapper = document.getElementById('staffSelectWrapper');
     const guidelineInputs = document.querySelectorAll('input[name="guideline"]');
 
     // State
@@ -642,7 +644,9 @@
           if (input.checked) {
             input.closest('.guideline-option')?.classList.add('selected');
             selectedGuideline = input.value;
-            staffSelectWrapper.classList.remove('disabled-section');
+            secScan.classList.remove('disabled-section');
+            scrollToEl(secScan);
+            scanStatus.textContent = "「入室」または「退室」を選択してください";
           }
         });
       });
@@ -719,10 +723,6 @@
     }
 
     function selectStaff(uuid, name, btnEl) {
-      if (!selectedGuideline) {
-        showToast('行動指針を選択してください', 'error');
-        return;
-      }
       document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
       btnEl.classList.add('selected');
       selectedStaffUuid = uuid;
@@ -730,6 +730,10 @@
       verified = false;
       birthInput.value = '';
       verifyFeedback.textContent = '';
+      selectedGuideline = null;
+      guidelineInputs.forEach((input) => { input.checked = false; });
+      document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+      secGuideline.classList.add('disabled-section');
       secScan.classList.add('disabled-section');
       stopCamera();
       secVerify.classList.remove('disabled-section');
@@ -764,9 +768,8 @@
           verified = true;
           verifyFeedback.textContent = 'OK: ' + res.name;
           verifyFeedback.className = 'verify-feedback success';
-          secScan.classList.remove('disabled-section');
-          scrollToEl(secScan);
-          scanStatus.textContent = "「入室」または「退室」を選択してください";
+          secGuideline.classList.remove('disabled-section');
+          scrollToEl(secGuideline);
         } else {
           verifyFeedback.textContent = '生年月日が一致しません';
           verifyFeedback.className = 'verify-feedback error';
@@ -879,7 +882,7 @@
       selectedGuideline = null;
       guidelineInputs.forEach((input) => { input.checked = false; });
       document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
-      staffSelectWrapper.classList.add('disabled-section');
+      secGuideline.classList.add('disabled-section');
       selectedStaffUuid = null;
       selectedStaffName = null;
       verified = false;
