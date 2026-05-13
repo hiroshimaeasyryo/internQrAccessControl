@@ -189,7 +189,12 @@ function verifyStaff(uuid, birthdateStr) {
  *     placeId: string,
  *     type: string, // 'in' | 'out' など
  *     qrValue: string, // 実際に読み取ったQRの文字列（ログに残したければ）
+ *     guidelineId: string, // 選択した行動指針のID（1〜7）
+ *     guidelineText: string, // 選択した行動指針の文言
  *   }
+ *
+ * 打刻記録シートの列順:
+ *   timestamp / uuid / name / placeId / type / userAgent / guidelineId / guidelineText
  */
 function recordTimestamp(payload) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -207,7 +212,9 @@ function recordTimestamp(payload) {
     payload.name || '',
     payload.placeId || '',
     payload.type || '',
-    userAgent
+    userAgent,
+    payload.guidelineId || '',
+    payload.guidelineText || ''
   ]);
 
   // メッセージ生成

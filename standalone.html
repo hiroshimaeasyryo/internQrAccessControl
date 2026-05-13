@@ -833,12 +833,20 @@
             stopCamera();
             scanStatus.textContent = "送信中...";
 
+            const selectedGuidelineEl = document.querySelector('input[name="guideline"]:checked');
+            const guidelineId = selectedGuidelineEl ? selectedGuidelineEl.value : '';
+            const guidelineText = selectedGuidelineEl
+                ? (selectedGuidelineEl.closest('.guideline-option')?.querySelector('span')?.textContent || '').trim()
+                : '';
+
             const payload = {
                 uuid: selectedStaffUuid,
                 name: selectedStaffName,
                 placeId: placeId,
                 type: selectedType,
-                qrValue: qrData
+                qrValue: qrData,
+                guidelineId: guidelineId,
+                guidelineText: guidelineText
             };
 
             try {
