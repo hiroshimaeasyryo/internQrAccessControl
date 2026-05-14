@@ -512,9 +512,24 @@
       <div id="verifyFeedback" class="verify-feedback"></div>
     </section>
 
-    <!-- STEP 3: GUIDELINE -->
+    <!-- STEP 3: TYPE (入退室タイプ選択) -->
+    <section class="card disabled-section" id="sec-type">
+      <div class="card-title">STEP 3: 入退室の選択</div>
+      <div class="type-switcher" id="typeSwitcher">
+        <div class="type-btn" data-type="in" onclick="selectType('in')">
+          <span class="type-icon"><i class="fa-solid fa-door-open"></i></span>
+          <span>入室</span>
+        </div>
+        <div class="type-btn" data-type="out" onclick="selectType('out')">
+          <span class="type-icon"><i class="fa-solid fa-door-closed"></i></span>
+          <span>退室</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4: GUIDELINE (入室時のみ) -->
     <section class="card disabled-section" id="sec-guideline">
-      <div class="card-title">STEP 3: 行動指針選択</div>
+      <div class="card-title">STEP 4: 行動指針選択</div>
       <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
       <div class="guideline-list" id="guidelineList">
         <label class="guideline-option"><input type="radio" name="guideline" value="1"><span>感謝を、当たり前に: いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</span></label>
@@ -527,21 +542,9 @@
       </div>
     </section>
 
-    <!-- STEP 4: SCAN -->
+    <!-- STEP 5: SCAN -->
     <section class="card disabled-section" id="sec-scan">
-      <div class="card-title">STEP 4: 打刻</div>
-
-      <div class="type-switcher" id="typeSwitcher">
-        <div class="type-btn" data-type="in" onclick="selectType('in')">
-          <span class="type-icon"><i class="fa-solid fa-door-open"></i></span>
-          <span>入室</span>
-        </div>
-        <div class="type-btn" data-type="out" onclick="selectType('out')">
-          <span class="type-icon"><i class="fa-solid fa-door-closed"></i></span>
-          <span>退室</span>
-        </div>
-      </div>
-
+      <div class="card-title">STEP 5: QRコード読み取り</div>
       <div class="camera-box">
         <video id="video" autoplay muted playsinline></video>
         <div class="scan-line" id="scanLine"></div>
@@ -616,6 +619,7 @@
     // UI Refs
     const secStaff = document.getElementById('sec-staff');
     const secVerify = document.getElementById('sec-verify');
+    const secType = document.getElementById('sec-type');
     const secGuideline = document.getElementById('sec-guideline');
     const secScan = document.getElementById('sec-scan');
     const staffGrid = document.getElementById('staffGrid');
@@ -646,7 +650,7 @@
             selectedGuideline = input.value;
             secScan.classList.remove('disabled-section');
             scrollToEl(secScan);
-            scanStatus.textContent = "「入室」または「退室」を選択してください";
+            if (!scanning) startCamera();
           }
         });
       });
@@ -731,8 +735,11 @@
       birthInput.value = '';
       verifyFeedback.textContent = '';
       selectedGuideline = null;
+      selectedType = null;
+      typeBtns.forEach(btn => btn.classList.remove('active'));
       guidelineInputs.forEach((input) => { input.checked = false; });
       document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+      secType.classList.add('disabled-section');
       secGuideline.classList.add('disabled-section');
       secScan.classList.add('disabled-section');
       stopCamera();
@@ -768,8 +775,8 @@
           verified = true;
           verifyFeedback.textContent = 'OK: ' + res.name;
           verifyFeedback.className = 'verify-feedback success';
-          secGuideline.classList.remove('disabled-section');
-          scrollToEl(secGuideline);
+          secType.classList.remove('disabled-section');
+          scrollToEl(secType);
         } else {
           verifyFeedback.textContent = '生年月日が一致しません';
           verifyFeedback.className = 'verify-feedback error';
@@ -789,7 +796,22 @@
         if (btn.dataset.type === type) btn.classList.add('active');
         else btn.classList.remove('active');
       });
-      if (!scanning) startCamera();
+
+      // 入室時のみ行動指針セクションを表示。退室時はスキップして直接スキャンへ。
+      if (type === 'in') {
+        secGuideline.classList.remove('disabled-section');
+        secScan.classList.add('disabled-section');
+        stopCamera();
+        scrollToEl(secGuideline);
+      } else {
+        selectedGuideline = null;
+        guidelineInputs.forEach((input) => { input.checked = false; });
+        document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+        secGuideline.classList.add('disabled-section');
+        secScan.classList.remove('disabled-section');
+        scrollToEl(secScan);
+        if (!scanning) startCamera();
+      }
     };
 
     function startCamera() {
@@ -898,6 +920,7 @@
       isVerifying = false;
       selectedType = null;
       secVerify.classList.add('disabled-section');
+      secType.classList.add('disabled-section');
       secScan.classList.add('disabled-section');
       birthInput.value = '';
       verifyFeedback.textContent = '';
