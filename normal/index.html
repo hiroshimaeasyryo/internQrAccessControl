@@ -477,43 +477,43 @@
       color: var(--primary);
     }
 
-    /* === ABテスト: 水平スクロール版レイアウト === */
+    /* === ABテスト: 水平マーキー（電光掲示板）レイアウト === */
     body[data-layout="horizontal"] .guideline-list {
-      display: flex;
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-      gap: 12px;
-      padding: 8px 4px 16px;
+      display: block;
+      overflow: hidden;
+      position: relative;
       margin: -8px -16px -16px;
-      scroll-padding: 0 16px;
-      scrollbar-width: none;
+      padding: 8px 0 16px;
+      mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
     }
 
-    body[data-layout="horizontal"] .guideline-list::-webkit-scrollbar {
-      display: none;
+    body[data-layout="horizontal"] .guideline-track {
+      display: flex;
+      gap: 12px;
+      width: max-content;
+      animation: guideline-marquee 40s linear infinite;
+      will-change: transform;
+    }
+
+    body[data-layout="horizontal"] .guideline-list.paused .guideline-track {
+      animation-play-state: paused;
     }
 
     body[data-layout="horizontal"] .guideline-option {
-      flex: 0 0 calc(100% - 48px);
-      scroll-snap-align: center;
-      min-height: 140px;
-      margin-left: 4px;
-      margin-right: 4px;
+      flex: 0 0 auto;
+      width: calc(100vw - 96px);
+      max-width: 340px;
+      min-height: 130px;
     }
 
-    body[data-layout="horizontal"] .guideline-option:first-child {
-      margin-left: 16px;
-    }
-
-    body[data-layout="horizontal"] .guideline-option:last-child {
-      margin-right: 16px;
+    @keyframes guideline-marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(calc(-50% - 6px)); } /* gap の半分を引いて1セット分だけ移動 */
     }
 
     body[data-layout="horizontal"] .guideline-hint::after {
-      content: "（自動でスクロール中：触ると一時停止）";
+      content: "（右から左へ自動で流れます／触ると一時停止）";
       display: block;
       margin-top: 4px;
       color: var(--primary);
@@ -755,82 +755,74 @@
     let scanning = false;
     let isVerifying = false;
 
-    // --- ABテスト: 水平スクロール版の自動スクロール ---
-    let autoScrollIntervalId = null;
-    let autoScrollPauseTimer = null;
-    let autoScrollPaused = false;
-    let autoScrollStopped = false;
-
-    function startGuidelineAutoScroll() {
+    // --- ABテスト: 水平マーキーレイアウト用セットアップ ---
+    // - guideline-list の中身を guideline-track でラップ
+    // - 同じカード群をもう1セット複製してシームレスにループ
+    // - ホバー / タッチで一時停止（タッチは5秒後に再開）
+    function setupGuidelineMarquee() {
       if (document.body.dataset.layout !== 'horizontal') return;
-      if (autoScrollIntervalId) return;
-
       const list = document.getElementById('guidelineList');
       if (!list) return;
+      if (list.querySelector('.guideline-track')) return; // 二重初期化防止
 
-      const pauseTemporarily = (ms = 8000) => {
-        autoScrollPaused = true;
-        clearTimeout(autoScrollPauseTimer);
-        autoScrollPauseTimer = setTimeout(() => { autoScrollPaused = false; }, ms);
-      };
+      const originals = Array.from(list.children);
+      const track = document.createElement('div');
+      track.className = 'guideline-track';
+      originals.forEach((node) => track.appendChild(node));
 
-      // ユーザーが触ったら一時停止（8秒後に再開）
-      ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => {
-        list.addEventListener(ev, () => pauseTemporarily(8000), { passive: true });
+      // シームレスループのためにもう1セット複製
+      originals.forEach((node) => {
+        const clone = node.cloneNode(true);
+        clone.dataset.cloned = 'true';
+        const cloneInput = clone.querySelector('input[name="guideline"]');
+        if (cloneInput) cloneInput.dataset.cloned = 'true';
+        track.appendChild(clone);
       });
+      list.appendChild(track);
 
-      autoScrollIntervalId = setInterval(() => {
-        if (autoScrollPaused || autoScrollStopped) return;
-        const cards = list.querySelectorAll('.guideline-option');
-        if (cards.length === 0) return;
-
-        // 現在のスクロール中心に最も近いカードを取得
-        const center = list.scrollLeft + list.clientWidth / 2;
-        let closestIndex = 0;
-        let closestDistance = Infinity;
-        cards.forEach((card, i) => {
-          const cardCenter = card.offsetLeft + card.clientWidth / 2;
-          const d = Math.abs(cardCenter - center);
-          if (d < closestDistance) {
-            closestDistance = d;
-            closestIndex = i;
-          }
-        });
-
-        // 次のカードに進む（末尾まで行ったら先頭に戻る）
-        const nextIndex = (closestIndex + 1) % cards.length;
-        const nextCard = cards[nextIndex];
-        const targetLeft = nextCard.offsetLeft + nextCard.clientWidth / 2 - list.clientWidth / 2;
-        list.scrollTo({ left: targetLeft, behavior: 'smooth' });
-      }, 3000);
+      // ホバー/タッチで一時停止
+      let resumeTimer = null;
+      const pause = () => list.classList.add('paused');
+      const resumeLater = (ms) => {
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(() => list.classList.remove('paused'), ms);
+      };
+      list.addEventListener('mouseenter', pause);
+      list.addEventListener('mouseleave', () => list.classList.remove('paused'));
+      list.addEventListener('touchstart', () => { pause(); resumeLater(5000); }, { passive: true });
+      list.addEventListener('pointerdown', () => { pause(); resumeLater(5000); }, { passive: true });
     }
 
-    function stopGuidelineAutoScroll() {
-      autoScrollStopped = true;
-      if (autoScrollIntervalId) {
-        clearInterval(autoScrollIntervalId);
-        autoScrollIntervalId = null;
-      }
+    // 行動指針が選択された時の共通処理
+    // 複製を含む全ての同value ラジオを同期させ、selected クラスを統一する
+    function onGuidelineSelected(input) {
+      if (!input.checked) return;
+      const value = input.value;
+      document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+      document.querySelectorAll('input[name="guideline"][value="' + value + '"]').forEach((inp) => {
+        inp.checked = true;
+        inp.closest('.guideline-option')?.classList.add('selected');
+      });
+      selectedGuideline = value;
+      // マーキーを完全停止
+      const list = document.getElementById('guidelineList');
+      list?.classList.add('paused');
+      secScan.classList.remove('disabled-section');
+      scrollToEl(secScan);
+      scanStatus.textContent = "「入室」または「退室」を選択してください";
     }
 
     // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
-      guidelineInputs.forEach((input) => {
-        input.addEventListener('change', () => {
-          document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
-          if (input.checked) {
-            input.closest('.guideline-option')?.classList.add('selected');
-            selectedGuideline = input.value;
-            // 選択が確定したら自動スクロール停止
-            stopGuidelineAutoScroll();
-            secScan.classList.remove('disabled-section');
-            scrollToEl(secScan);
-            scanStatus.textContent = "「入室」または「退室」を選択してください";
-          }
-        });
+      // 水平マーキー化（horizontal レイアウトのみ実施）
+      setupGuidelineMarquee();
+
+      // 複製も含めて全てのラジオに change ハンドラを付与
+      document.querySelectorAll('input[name="guideline"]').forEach((input) => {
+        input.addEventListener('change', () => onGuidelineSelected(input));
       });
+
       initStaffList();
-      startGuidelineAutoScroll();
     });
 
     // --- 1. Staff List ---
@@ -1073,7 +1065,8 @@
 
     function resetApp() {
       selectedGuideline = null;
-      guidelineInputs.forEach((input) => { input.checked = false; });
+      // オリジナル＋複製ぜんぶクリア
+      document.querySelectorAll('input[name="guideline"]').forEach((input) => { input.checked = false; });
       document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
       secGuideline.classList.add('disabled-section');
       selectedStaffUuid = null;
@@ -1091,9 +1084,8 @@
       document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
       typeBtns.forEach(btn => btn.classList.remove('active'));
       stopCamera();
-      // ABテスト: 水平スクロール版では自動スクロールを再開
-      autoScrollStopped = false;
-      startGuidelineAutoScroll();
+      // 水平マーキーの一時停止を解除して再開
+      document.getElementById('guidelineList')?.classList.remove('paused');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   </script>
