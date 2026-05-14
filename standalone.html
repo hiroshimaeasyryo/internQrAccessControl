@@ -603,7 +603,68 @@
                     <span>退室</span>
                 </div>
             </div>
+        </section>
 
+        <!-- STEP 4: GUIDELINE (入室時のみ) -->
+        <section class="card disabled-section" id="sec-guideline">
+            <div class="card-title">STEP 4: 行動指針選択</div>
+            <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
+            <div class="guideline-list" id="guidelineList">
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="1">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">感謝を、当たり前に</strong>
+                        <p class="guideline-desc">いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="2">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">冷笑しない</strong>
+                        <p class="guideline-desc">他人の挑戦を笑わない。尊敬を忘れず、人に向き合う。挑戦する勇気を尊重する。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="3">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">相手以上に相手のことを考える</strong>
+                        <p class="guideline-desc">相手の期待を超え続ける。おせっかいを恐れず、相手の未来を本気で考える。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="4">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">自ら挑み、自ずから応援される</strong>
+                        <p class="guideline-desc">主体的に、挑戦する。自らの志を目的とし、応援されることを目的としてはならない。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="5">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">誠実かつ愚直に、貢献し続ける</strong>
+                        <p class="guideline-desc">手を抜かず、真摯に向き合う。人の役に立つことに、本気であり続ける。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="6">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">「こんなもんか」で終わらず、一歩前へ</strong>
+                        <p class="guideline-desc">現状に満足せず、常に成長する。妥協を許さず、昨日の自分を超え続ける。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="7">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">遊び心を大切に、今を生きる</strong>
+                        <p class="guideline-desc">計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</p>
+                    </div>
+                </label>
+            </div>
+        </section>
+
+        <!-- STEP 5: SCAN -->
+        <section class="card disabled-section" id="sec-scan">
+            <div class="card-title">STEP 5: QRコード読み取り</div>
             <div class="camera-box">
                 <video id="video" autoplay muted playsinline></video>
                 <div class="scan-line" id="scanLine"></div>
@@ -672,6 +733,7 @@
         // UI Refs
         const secStaff = document.getElementById('sec-staff');
         const secVerify = document.getElementById('sec-verify');
+        const secType = document.getElementById('sec-type');
         const secGuideline = document.getElementById('sec-guideline');
         const secScan = document.getElementById('sec-scan');
         const staffGrid = document.getElementById('staffGrid');
@@ -702,7 +764,7 @@
                         selectedGuideline = input.value;
                         secScan.classList.remove('disabled-section');
                         scrollToEl(secScan);
-                        scanStatus.textContent = "「入室」または「退室」を選択してください";
+                        if (!scanning) startCamera();
                     }
                 });
             });
@@ -787,8 +849,11 @@
             birthInput.value = '';
             verifyFeedback.textContent = '';
             selectedGuideline = null;
+            selectedType = null;
+            typeBtns.forEach(btn => btn.classList.remove('active'));
             guidelineInputs.forEach((input) => { input.checked = false; });
             document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+            secType.classList.add('disabled-section');
             secGuideline.classList.add('disabled-section');
             secScan.classList.add('disabled-section');
             stopCamera();
@@ -824,8 +889,8 @@
                     verified = true;
                     verifyFeedback.textContent = 'OK: ' + res.name;
                     verifyFeedback.className = 'verify-feedback success';
-                    secGuideline.classList.remove('disabled-section');
-                    scrollToEl(secGuideline);
+                    secType.classList.remove('disabled-section');
+                    scrollToEl(secType);
                 } else {
                     verifyFeedback.textContent = '生年月日が一致しません';
                     verifyFeedback.className = 'verify-feedback error';
@@ -845,7 +910,22 @@
                 if (btn.dataset.type === type) btn.classList.add('active');
                 else btn.classList.remove('active');
             });
-            if (!scanning) startCamera();
+
+            // 入室時のみ行動指針セクションを表示。退室時はスキップして直接スキャンへ。
+            if (type === 'in') {
+                secGuideline.classList.remove('disabled-section');
+                secScan.classList.add('disabled-section');
+                stopCamera();
+                scrollToEl(secGuideline);
+            } else {
+                selectedGuideline = null;
+                guidelineInputs.forEach((input) => { input.checked = false; });
+                document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+                secGuideline.classList.add('disabled-section');
+                secScan.classList.remove('disabled-section');
+                scrollToEl(secScan);
+                if (!scanning) startCamera();
+            }
         };
 
         function startCamera() {
@@ -951,6 +1031,7 @@
             selectedGuideline = null;
             guidelineInputs.forEach((input) => { input.checked = false; });
             document.querySelectorAll('.guideline-option').forEach((lbl) => lbl.classList.remove('selected'));
+            secType.classList.add('disabled-section');
             secGuideline.classList.add('disabled-section');
             selectedStaffUuid = null;
             selectedStaffName = null;
