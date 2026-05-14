@@ -532,9 +532,67 @@
             <div id="verifyFeedback" class="verify-feedback"></div>
         </section>
 
-        <!-- STEP 3: TYPE (入退室タイプ選択) -->
-        <section class="card disabled-section" id="sec-type">
-            <div class="card-title">STEP 3: 入退室の選択</div>
+        <!-- STEP 3: GUIDELINE -->
+        <section class="card disabled-section" id="sec-guideline">
+            <div class="card-title">STEP 3: 行動指針選択</div>
+            <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
+            <div class="guideline-list" id="guidelineList">
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="1">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">感謝を、当たり前に</strong>
+                        <p class="guideline-desc">いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="2">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">冷笑しない</strong>
+                        <p class="guideline-desc">他人の挑戦を笑わない。尊敬を忘れず、人に向き合う。挑戦する勇気を尊重する。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="3">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">相手以上に相手のことを考える</strong>
+                        <p class="guideline-desc">相手の期待を超え続ける。おせっかいを恐れず、相手の未来を本気で考える。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="4">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">自ら挑み、自ずから応援される</strong>
+                        <p class="guideline-desc">主体的に、挑戦する。自らの志を目的とし、応援されることを目的としてはならない。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="5">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">誠実かつ愚直に、貢献し続ける</strong>
+                        <p class="guideline-desc">手を抜かず、真摯に向き合う。人の役に立つことに、本気であり続ける。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="6">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">「こんなもんか」で終わらず、一歩前へ</strong>
+                        <p class="guideline-desc">現状に満足せず、常に成長する。妥協を許さず、昨日の自分を超え続ける。</p>
+                    </div>
+                </label>
+                <label class="guideline-option">
+                    <input type="radio" name="guideline" value="7">
+                    <div class="guideline-content">
+                        <strong class="guideline-title">遊び心を大切に、今を生きる</strong>
+                        <p class="guideline-desc">計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</p>
+                    </div>
+                </label>
+            </div>
+        </section>
+
+        <!-- STEP 4: SCAN -->
+        <section class="card disabled-section" id="sec-scan">
+            <div class="card-title">STEP 4: 打刻</div>
+
             <div class="type-switcher" id="typeSwitcher">
                 <div class="type-btn" data-type="in" onclick="selectType('in')">
                     <span class="type-icon"><i class="fa-solid fa-door-open"></i></span>
