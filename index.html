@@ -513,9 +513,12 @@
     }
 
     body[data-layout="horizontal"] .guideline-hint::after {
-      content: "  ← スワイプで切り替え →";
+      content: "（自動でスクロール中：触ると一時停止）";
+      display: block;
+      margin-top: 4px;
       color: var(--primary);
       font-weight: 600;
+      font-size: 0.72rem;
     }
 
     .spinner {
@@ -752,6 +755,64 @@
     let scanning = false;
     let isVerifying = false;
 
+    // --- ABテスト: 水平スクロール版の自動スクロール ---
+    let autoScrollIntervalId = null;
+    let autoScrollPauseTimer = null;
+    let autoScrollPaused = false;
+    let autoScrollStopped = false;
+
+    function startGuidelineAutoScroll() {
+      if (document.body.dataset.layout !== 'horizontal') return;
+      if (autoScrollIntervalId) return;
+
+      const list = document.getElementById('guidelineList');
+      if (!list) return;
+
+      const pauseTemporarily = (ms = 8000) => {
+        autoScrollPaused = true;
+        clearTimeout(autoScrollPauseTimer);
+        autoScrollPauseTimer = setTimeout(() => { autoScrollPaused = false; }, ms);
+      };
+
+      // ユーザーが触ったら一時停止（8秒後に再開）
+      ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => {
+        list.addEventListener(ev, () => pauseTemporarily(8000), { passive: true });
+      });
+
+      autoScrollIntervalId = setInterval(() => {
+        if (autoScrollPaused || autoScrollStopped) return;
+        const cards = list.querySelectorAll('.guideline-option');
+        if (cards.length === 0) return;
+
+        // 現在のスクロール中心に最も近いカードを取得
+        const center = list.scrollLeft + list.clientWidth / 2;
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+        cards.forEach((card, i) => {
+          const cardCenter = card.offsetLeft + card.clientWidth / 2;
+          const d = Math.abs(cardCenter - center);
+          if (d < closestDistance) {
+            closestDistance = d;
+            closestIndex = i;
+          }
+        });
+
+        // 次のカードに進む（末尾まで行ったら先頭に戻る）
+        const nextIndex = (closestIndex + 1) % cards.length;
+        const nextCard = cards[nextIndex];
+        const targetLeft = nextCard.offsetLeft + nextCard.clientWidth / 2 - list.clientWidth / 2;
+        list.scrollTo({ left: targetLeft, behavior: 'smooth' });
+      }, 3000);
+    }
+
+    function stopGuidelineAutoScroll() {
+      autoScrollStopped = true;
+      if (autoScrollIntervalId) {
+        clearInterval(autoScrollIntervalId);
+        autoScrollIntervalId = null;
+      }
+    }
+
     // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
       guidelineInputs.forEach((input) => {
@@ -760,6 +821,8 @@
           if (input.checked) {
             input.closest('.guideline-option')?.classList.add('selected');
             selectedGuideline = input.value;
+            // 選択が確定したら自動スクロール停止
+            stopGuidelineAutoScroll();
             secScan.classList.remove('disabled-section');
             scrollToEl(secScan);
             scanStatus.textContent = "「入室」または「退室」を選択してください";
@@ -767,6 +830,7 @@
         });
       });
       initStaffList();
+      startGuidelineAutoScroll();
     });
 
     // --- 1. Staff List ---
@@ -1027,6 +1091,9 @@
       document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
       typeBtns.forEach(btn => btn.classList.remove('active'));
       stopCamera();
+      // ABテスト: 水平スクロール版では自動スクロールを再開
+      autoScrollStopped = false;
+      startGuidelineAutoScroll();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   </script>

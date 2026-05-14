@@ -450,10 +450,31 @@
       accent-color: var(--primary);
     }
 
-    .guideline-option span {
-      font-size: 0.82rem;
-      line-height: 1.45;
+    .guideline-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .guideline-title {
+      font-size: 0.92rem;
+      font-weight: 700;
       color: var(--text-main);
+      line-height: 1.35;
+    }
+
+    .guideline-desc {
+      font-size: 0.78rem;
+      font-weight: 400;
+      color: var(--text-sub);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .guideline-option.selected .guideline-title {
+      color: var(--primary);
     }
 
     /* === ABテスト: 水平スクロール版レイアウト === */
@@ -492,9 +513,12 @@
     }
 
     body[data-layout="horizontal"] .guideline-hint::after {
-      content: "  ← スワイプで切り替え →";
+      content: "（自動でスクロール中：触ると一時停止）";
+      display: block;
+      margin-top: 4px;
       color: var(--primary);
       font-weight: 600;
+      font-size: 0.72rem;
     }
 
     .spinner {
@@ -558,13 +582,55 @@
       <div class="card-title">STEP 3: 行動指針選択</div>
       <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
       <div class="guideline-list" id="guidelineList">
-        <label class="guideline-option"><input type="radio" name="guideline" value="1"><span>感謝を、当たり前に: いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="2"><span>冷笑しない: 他人の挑戦を笑わない。尊敬を忘れず、人に向き合う。挑戦する勇気を尊重する。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="3"><span>相手以上に相手のことを考える: 相手の期待を超え続ける。おせっかいを恐れず、相手の未来を本気で考える。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="4"><span>自ら挑み、自ずから応援される: 主体的に、挑戦する。自らの志を目的とし、応援されることを目的としてはならない。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="5"><span>誠実かつ愚直に、貢献し続ける: 手を抜かず、真摯に向き合う。人の役に立つことに、本気であり続ける。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="6"><span>「こんなもんか」で終わらず、一歩前へ: 現状に満足せず、常に成長する。妥協を許さず、昨日の自分を超え続ける。</span></label>
-        <label class="guideline-option"><input type="radio" name="guideline" value="7"><span>遊び心を大切に、今を生きる: 計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</span></label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="1">
+          <div class="guideline-content">
+            <strong class="guideline-title">感謝を、当たり前に</strong>
+            <p class="guideline-desc">いつも感謝を忘れない。支えられていることに気づき、全ての人・モノに感謝する。</p>
+          </div>
+        </label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="2">
+          <div class="guideline-content">
+            <strong class="guideline-title">冷笑しない</strong>
+            <p class="guideline-desc">他人の挑戦を笑わない。尊敬を忘れず、人に向き合う。挑戦する勇気を尊重する。</p>
+          </div>
+        </label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="3">
+          <div class="guideline-content">
+            <strong class="guideline-title">相手以上に相手のことを考える</strong>
+            <p class="guideline-desc">相手の期待を超え続ける。おせっかいを恐れず、相手の未来を本気で考える。</p>
+          </div>
+        </label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="4">
+          <div class="guideline-content">
+            <strong class="guideline-title">自ら挑み、自ずから応援される</strong>
+            <p class="guideline-desc">主体的に、挑戦する。自らの志を目的とし、応援されることを目的としてはならない。</p>
+          </div>
+        </label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="5">
+          <div class="guideline-content">
+            <strong class="guideline-title">誠実かつ愚直に、貢献し続ける</strong>
+            <p class="guideline-desc">手を抜かず、真摯に向き合う。人の役に立つことに、本気であり続ける。</p>
+          </div>
+        </label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="6">
+          <div class="guideline-content">
+            <strong class="guideline-title">「こんなもんか」で終わらず、一歩前へ</strong>
+            <p class="guideline-desc">現状に満足せず、常に成長する。妥協を許さず、昨日の自分を超え続ける。</p>
+          </div>
+        </label>
+        <label class="guideline-option">
+          <input type="radio" name="guideline" value="7">
+          <div class="guideline-content">
+            <strong class="guideline-title">遊び心を大切に、今を生きる</strong>
+            <p class="guideline-desc">計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</p>
+          </div>
+        </label>
       </div>
     </section>
 
@@ -689,6 +755,64 @@
     let scanning = false;
     let isVerifying = false;
 
+    // --- ABテスト: 水平スクロール版の自動スクロール ---
+    let autoScrollIntervalId = null;
+    let autoScrollPauseTimer = null;
+    let autoScrollPaused = false;
+    let autoScrollStopped = false;
+
+    function startGuidelineAutoScroll() {
+      if (document.body.dataset.layout !== 'horizontal') return;
+      if (autoScrollIntervalId) return;
+
+      const list = document.getElementById('guidelineList');
+      if (!list) return;
+
+      const pauseTemporarily = (ms = 8000) => {
+        autoScrollPaused = true;
+        clearTimeout(autoScrollPauseTimer);
+        autoScrollPauseTimer = setTimeout(() => { autoScrollPaused = false; }, ms);
+      };
+
+      // ユーザーが触ったら一時停止（8秒後に再開）
+      ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => {
+        list.addEventListener(ev, () => pauseTemporarily(8000), { passive: true });
+      });
+
+      autoScrollIntervalId = setInterval(() => {
+        if (autoScrollPaused || autoScrollStopped) return;
+        const cards = list.querySelectorAll('.guideline-option');
+        if (cards.length === 0) return;
+
+        // 現在のスクロール中心に最も近いカードを取得
+        const center = list.scrollLeft + list.clientWidth / 2;
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+        cards.forEach((card, i) => {
+          const cardCenter = card.offsetLeft + card.clientWidth / 2;
+          const d = Math.abs(cardCenter - center);
+          if (d < closestDistance) {
+            closestDistance = d;
+            closestIndex = i;
+          }
+        });
+
+        // 次のカードに進む（末尾まで行ったら先頭に戻る）
+        const nextIndex = (closestIndex + 1) % cards.length;
+        const nextCard = cards[nextIndex];
+        const targetLeft = nextCard.offsetLeft + nextCard.clientWidth / 2 - list.clientWidth / 2;
+        list.scrollTo({ left: targetLeft, behavior: 'smooth' });
+      }, 3000);
+    }
+
+    function stopGuidelineAutoScroll() {
+      autoScrollStopped = true;
+      if (autoScrollIntervalId) {
+        clearInterval(autoScrollIntervalId);
+        autoScrollIntervalId = null;
+      }
+    }
+
     // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
       guidelineInputs.forEach((input) => {
@@ -697,6 +821,8 @@
           if (input.checked) {
             input.closest('.guideline-option')?.classList.add('selected');
             selectedGuideline = input.value;
+            // 選択が確定したら自動スクロール停止
+            stopGuidelineAutoScroll();
             secScan.classList.remove('disabled-section');
             scrollToEl(secScan);
             scanStatus.textContent = "「入室」または「退室」を選択してください";
@@ -704,6 +830,7 @@
         });
       });
       initStaffList();
+      startGuidelineAutoScroll();
     });
 
     // --- 1. Staff List ---
@@ -894,10 +1021,15 @@
       scanStatus.textContent = "送信中...";
 
       const selectedGuidelineEl = document.querySelector('input[name="guideline"]:checked');
-      const guidelineId = selectedGuidelineEl ? selectedGuidelineEl.value : '';
-      const guidelineText = selectedGuidelineEl
-        ? (selectedGuidelineEl.closest('.guideline-option')?.querySelector('span')?.textContent || '').trim()
-        : '';
+      let guidelineId = '';
+      let guidelineText = '';
+      if (selectedGuidelineEl) {
+        guidelineId = selectedGuidelineEl.value;
+        const option = selectedGuidelineEl.closest('.guideline-option');
+        const title = (option?.querySelector('.guideline-title')?.textContent || '').trim();
+        const desc = (option?.querySelector('.guideline-desc')?.textContent || '').trim();
+        guidelineText = title && desc ? `${title}: ${desc}` : (title || desc);
+      }
 
       const payload = {
         uuid: selectedStaffUuid,
@@ -959,6 +1091,9 @@
       document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
       typeBtns.forEach(btn => btn.classList.remove('active'));
       stopCamera();
+      // ABテスト: 水平スクロール版では自動スクロールを再開
+      autoScrollStopped = false;
+      startGuidelineAutoScroll();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   </script>
