@@ -477,39 +477,123 @@
       color: var(--primary);
     }
 
-    /* === ABテスト: 水平マーキー（電光掲示板）レイアウト === */
+    /* === ABテスト: 水平レイアウト（スワイプスクロール） === */
+    .guideline-swipe-hint {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 0 0 10px;
+      line-height: 1.4;
+    }
+
+    .guideline-horizontal-wrap {
+      display: contents;
+    }
+
+    body[data-layout="horizontal"] .guideline-swipe-hint {
+      display: flex;
+    }
+
+    body[data-layout="horizontal"] .guideline-horizontal-wrap {
+      display: block;
+      position: relative;
+      margin: -4px -16px 0;
+      padding: 0 0 8px;
+    }
+
     body[data-layout="horizontal"] .guideline-list {
       display: block;
-      overflow: hidden;
-      position: relative;
-      margin: -8px -16px -16px;
-      padding: 8px 0 16px;
-      mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: 20px;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+      margin: 0;
+      padding: 8px 16px 14px;
+      mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
     }
 
     body[data-layout="horizontal"] .guideline-track {
       display: flex;
       gap: 12px;
       width: max-content;
-      animation: guideline-marquee 40s linear infinite;
-      will-change: transform;
-    }
-
-    body[data-layout="horizontal"] .guideline-list.paused .guideline-track {
-      animation-play-state: paused;
     }
 
     body[data-layout="horizontal"] .guideline-option {
       flex: 0 0 auto;
-      width: calc(100vw - 96px);
-      max-width: 340px;
+      scroll-snap-align: start;
+      width: min(calc(100vw - 124px), 292px);
+      max-width: 292px;
       min-height: 130px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
     }
 
-    @keyframes guideline-marquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(calc(-50% - 6px)); } /* gap の半分を引いて1セット分だけ移動 */
+    .guideline-pager {
+      display: none;
+    }
+
+    body[data-layout="horizontal"] .guideline-pager {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 6px 16px 0;
+      margin: 0;
+    }
+
+    body[data-layout="horizontal"] .guideline-pager-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #D1D5DB;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    body[data-layout="horizontal"] .guideline-pager-dot.active {
+      background: var(--primary);
+      transform: scale(1.2);
+    }
+
+    .guideline-edge {
+      display: none;
+    }
+
+    body[data-layout="horizontal"] .guideline-edge {
+      display: flex;
+      position: absolute;
+      top: 8px;
+      bottom: 14px;
+      width: 32px;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: var(--primary);
+      font-size: 0.85rem;
+      opacity: 0.9;
+      z-index: 2;
+      text-shadow: 0 0 8px var(--card-bg);
+    }
+
+    body[data-layout="horizontal"] .guideline-edge-left {
+      left: 2px;
+    }
+
+    body[data-layout="horizontal"] .guideline-edge-right {
+      right: 2px;
+    }
+
+    body[data-layout="horizontal"] .guideline-option--clone {
+      cursor: pointer;
+      user-select: none;
     }
 
     .spinner {
@@ -572,7 +656,9 @@
     <section class="card disabled-section" id="sec-guideline">
       <div class="card-title">STEP 3: 行動指針選択</div>
       <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
-      <div class="guideline-list" id="guidelineList">
+      <p class="guideline-swipe-hint" role="note"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> 横にスワイプすると、つぎの指針が表示されます</p>
+      <div class="guideline-horizontal-wrap">
+        <div class="guideline-list" id="guidelineList">
         <label class="guideline-option">
           <input type="radio" name="guideline" value="1">
           <div class="guideline-content">
@@ -622,6 +708,9 @@
             <p class="guideline-desc">計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</p>
           </div>
         </label>
+        </div>
+        <div class="guideline-edge guideline-edge-left" aria-hidden="true"><i class="fa-solid fa-chevron-left"></i></div>
+        <div class="guideline-edge guideline-edge-right" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></div>
       </div>
     </section>
 
@@ -724,7 +813,9 @@
      */
     (function applyLayout() {
       const path = window.location.pathname || '';
-      const layout = path.includes('/horizontal') ? 'horizontal' : 'normal';
+      const q = new URLSearchParams(window.location.search || '');
+      const layout =
+        path.includes('/horizontal') || q.get('layout') === 'horizontal' ? 'horizontal' : 'normal';
       document.body.dataset.layout = layout;
     })();
 
@@ -808,42 +899,181 @@
     let scanning = false;
     let isVerifying = false;
 
-    // --- ABテスト: 水平マーキーレイアウト用セットアップ ---
-    // - guideline-list の中身を guideline-track でラップ
-    // - 同じカード群をもう1セット複製してシームレスにループ
-    // - ホバー / タッチで一時停止（タッチは5秒後に再開）
-    function setupGuidelineMarquee() {
+    // --- 水平レイアウト: 無限ループ（端なし）＋ピーク・ページャ・ロード時シャッフル（実カードは中央1列のみ） ---
+    function shuffleInPlace(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = arr[i];
+        arr[i] = arr[j];
+        arr[j] = t;
+      }
+    }
+
+    function cloneGuidelineCardNoRadio(source) {
+      const c = source.cloneNode(true);
+      const inp = c.querySelector('input[name="guideline"]');
+      if (inp) inp.remove();
+      c.classList.remove('guideline-option--real');
+      c.classList.add('guideline-option--clone');
+      c.setAttribute('aria-hidden', 'true');
+      return c;
+    }
+
+    function setupGuidelineHorizontalScroll() {
       if (document.body.dataset.layout !== 'horizontal') return;
       const list = document.getElementById('guidelineList');
       if (!list) return;
-      if (list.querySelector('.guideline-track')) return; // 二重初期化防止
+      if (list.querySelector('.guideline-track')) return;
 
-      const originals = Array.from(list.children);
+      const guidelineNodes = Array.from(list.children);
       const track = document.createElement('div');
       track.className = 'guideline-track';
-      originals.forEach((node) => track.appendChild(node));
-
-      // シームレスループのためにもう1セット複製
-      originals.forEach((node) => {
-        const clone = node.cloneNode(true);
-        clone.dataset.cloned = 'true';
-        const cloneInput = clone.querySelector('input[name="guideline"]');
-        if (cloneInput) cloneInput.dataset.cloned = 'true';
-        track.appendChild(clone);
-      });
       list.appendChild(track);
 
-      // ホバー/タッチで一時停止
-      let resumeTimer = null;
-      const pause = () => list.classList.add('paused');
-      const resumeLater = (ms) => {
-        clearTimeout(resumeTimer);
-        resumeTimer = setTimeout(() => list.classList.remove('paused'), ms);
-      };
-      list.addEventListener('mouseenter', pause);
-      list.addEventListener('mouseleave', () => list.classList.remove('paused'));
-      list.addEventListener('touchstart', () => { pause(); resumeLater(5000); }, { passive: true });
-      list.addEventListener('pointerdown', () => { pause(); resumeLater(5000); }, { passive: true });
+      const wrap = list.closest('.guideline-horizontal-wrap');
+      let pagerDots = [];
+      let setW = 0;
+      let loopGuard = false;
+
+      function measureSetWidth() {
+        const firstReal = track.querySelector('.guideline-option--real');
+        return firstReal ? firstReal.offsetLeft : 0;
+      }
+
+      function normalizeLoopScroll() {
+        if (loopGuard || !setW) return;
+        const sl = list.scrollLeft;
+        const cw = list.clientWidth;
+        const prevSnap = list.style.scrollSnapType;
+        if (sl < setW - cw / 2 - 1) {
+          loopGuard = true;
+          list.style.scrollSnapType = 'none';
+          list.scrollLeft = sl + setW;
+          list.style.scrollSnapType = prevSnap;
+          loopGuard = false;
+        } else if (sl > 2 * setW - cw + 4) {
+          loopGuard = true;
+          list.style.scrollSnapType = 'none';
+          list.scrollLeft = sl - setW;
+          list.style.scrollSnapType = prevSnap;
+          loopGuard = false;
+        }
+      }
+
+      function getLogicalLoopIndexFromScroll() {
+        const mid = list.scrollLeft + list.clientWidth / 2;
+        let best = 0;
+        let bestDist = Infinity;
+        track.querySelectorAll(':scope > .guideline-option').forEach((el) => {
+          const cMid = el.offsetLeft + el.offsetWidth / 2;
+          const d = Math.abs(cMid - mid);
+          if (d < bestDist) {
+            bestDist = d;
+            best = parseInt(el.dataset.loopIndex || '0', 10) || 0;
+          }
+        });
+        return best;
+      }
+
+      function updatePager() {
+        if (!pagerDots.length) return;
+        const i = getLogicalLoopIndexFromScroll();
+        pagerDots.forEach((d, j) => d.classList.toggle('active', j === i));
+      }
+
+      function updateAfterScroll() {
+        normalizeLoopScroll();
+        updatePager();
+      }
+
+      function buildPager(n) {
+        if (!wrap) return;
+        const existing = wrap.querySelector('.guideline-pager');
+        if (existing) existing.remove();
+        const pager = document.createElement('div');
+        pager.className = 'guideline-pager';
+        pager.setAttribute('role', 'tablist');
+        pager.setAttribute('aria-label', '行動指針の枚数');
+        pagerDots = [];
+        for (let i = 0; i < n; i++) {
+          const dot = document.createElement('span');
+          dot.className = 'guideline-pager-dot';
+          dot.setAttribute('role', 'presentation');
+          pager.appendChild(dot);
+          pagerDots.push(dot);
+        }
+        wrap.appendChild(pager);
+      }
+
+      function wireCloneClick(clone) {
+        clone.addEventListener('click', (e) => {
+          const t = e.target.closest('.guideline-option--clone');
+          if (!t || !track.contains(t)) return;
+          e.preventDefault();
+          const idx = t.dataset.loopIndex;
+          const real = track.querySelector('.guideline-option--real[data-loop-index="' + idx + '"]');
+          if (!real) return;
+          const inp = real.querySelector('input[name="guideline"]');
+          if (inp) {
+            inp.checked = true;
+            inp.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          const pad = parseFloat(getComputedStyle(list).scrollPaddingInlineStart) || 20;
+          list.scrollLeft = real.offsetLeft - pad;
+        });
+      }
+
+      function rebuildLoopingTrack() {
+        track.innerHTML = '';
+        const slice = guidelineNodes.slice();
+        shuffleInPlace(slice);
+        slice.forEach((node, i) => {
+          node.classList.remove('guideline-option--real', 'guideline-option--clone');
+          node.dataset.loopIndex = String(i);
+          node.classList.add('guideline-option--real');
+        });
+        slice.forEach((node) => {
+          const left = cloneGuidelineCardNoRadio(node);
+          wireCloneClick(left);
+          track.appendChild(left);
+        });
+        slice.forEach((node) => {
+          track.appendChild(node);
+        });
+        slice.forEach((node) => {
+          const right = cloneGuidelineCardNoRadio(node);
+          wireCloneClick(right);
+          track.appendChild(right);
+        });
+        setW = measureSetWidth();
+        buildPager(slice.length);
+        requestAnimationFrame(() => {
+          setW = measureSetWidth();
+          const reals = track.querySelectorAll('.guideline-option--real');
+          const n = reals.length;
+          const ri = n ? Math.floor(Math.random() * n) : 0;
+          const el = reals[ri];
+          const pad = parseFloat(getComputedStyle(list).scrollPaddingInlineStart) || 20;
+          if (el) list.scrollLeft = el.offsetLeft - pad;
+          updateAfterScroll();
+        });
+      }
+
+      function scrollGuidelineToRandomStart() {
+        rebuildLoopingTrack();
+      }
+
+      list.addEventListener('scroll', updateAfterScroll, { passive: true });
+      window.addEventListener('resize', () => {
+        setW = measureSetWidth();
+        updateAfterScroll();
+      });
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(scrollGuidelineToRandomStart);
+      });
+
+      window.scrollGuidelineToRandomStart = scrollGuidelineToRandomStart;
     }
 
     // 行動指針が選択された時の共通処理
@@ -857,9 +1087,6 @@
         inp.closest('.guideline-option')?.classList.add('selected');
       });
       selectedGuideline = value;
-      // マーキーを完全停止
-      const list = document.getElementById('guidelineList');
-      list?.classList.add('paused');
       secScan.classList.remove('disabled-section');
       scrollToEl(secScan);
       scanStatus.textContent = "「入室」または「退室」を選択してください";
@@ -867,8 +1094,7 @@
 
     // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
-      // 水平マーキー化（horizontal レイアウトのみ実施）
-      setupGuidelineMarquee();
+      setupGuidelineHorizontalScroll();
 
       // 複製も含めて全てのラジオに change ハンドラを付与
       document.querySelectorAll('input[name="guideline"]').forEach((input) => {
@@ -1156,8 +1382,9 @@
       document.querySelectorAll('.staff-btn').forEach(b => b.classList.remove('selected'));
       typeBtns.forEach(btn => btn.classList.remove('active'));
       stopCamera();
-      // 水平マーキーの一時停止を解除して再開
-      document.getElementById('guidelineList')?.classList.remove('paused');
+      if (typeof window.scrollGuidelineToRandomStart === 'function') {
+        window.scrollGuidelineToRandomStart();
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   </script>

@@ -477,39 +477,112 @@
       color: var(--primary);
     }
 
-    /* === ABテスト: 水平マーキー（電光掲示板）レイアウト === */
+    /* === ABテスト: 水平レイアウト（スワイプスクロール） === */
+    .guideline-swipe-hint {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 0 0 10px;
+      line-height: 1.4;
+    }
+
+    .guideline-horizontal-wrap {
+      display: contents;
+    }
+
+    body[data-layout="horizontal"] .guideline-swipe-hint {
+      display: flex;
+    }
+
+    body[data-layout="horizontal"] .guideline-horizontal-wrap {
+      display: block;
+      position: relative;
+      margin: -4px -16px 0;
+      padding: 0 0 8px;
+    }
+
     body[data-layout="horizontal"] .guideline-list {
       display: block;
-      overflow: hidden;
-      position: relative;
-      margin: -8px -16px -16px;
-      padding: 8px 0 16px;
-      mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+      margin: 0;
+      padding: 8px 16px 14px;
+      mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
     }
 
     body[data-layout="horizontal"] .guideline-track {
       display: flex;
       gap: 12px;
       width: max-content;
-      animation: guideline-marquee 40s linear infinite;
-      will-change: transform;
-    }
-
-    body[data-layout="horizontal"] .guideline-list.paused .guideline-track {
-      animation-play-state: paused;
     }
 
     body[data-layout="horizontal"] .guideline-option {
       flex: 0 0 auto;
+      scroll-snap-align: center;
       width: calc(100vw - 96px);
       max-width: 340px;
       min-height: 130px;
     }
 
-    @keyframes guideline-marquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(calc(-50% - 6px)); } /* gap の半分を引いて1セット分だけ移動 */
+    .guideline-edge {
+      display: none;
+    }
+
+    body[data-layout="horizontal"] .guideline-edge {
+      display: flex;
+      position: absolute;
+      top: 8px;
+      bottom: 14px;
+      width: 32px;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: var(--primary);
+      font-size: 0.85rem;
+      opacity: 0.9;
+      z-index: 2;
+      text-shadow: 0 0 8px var(--card-bg);
+    }
+
+    body[data-layout="horizontal"] .guideline-edge-left {
+      left: 2px;
+    }
+
+    body[data-layout="horizontal"] .guideline-edge-right {
+      right: 2px;
+    }
+
+    body[data-layout="horizontal"] .guideline-horizontal-wrap.at-start .guideline-edge-left {
+      opacity: 0.18;
+    }
+
+    body[data-layout="horizontal"] .guideline-horizontal-wrap.at-end .guideline-edge-right {
+      opacity: 0.18;
+    }
+
+    @keyframes swipe-hint-nudge {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      50% {
+        transform: translateX(5px);
+      }
+    }
+
+    body[data-layout="horizontal"] .guideline-swipe-hint i {
+      animation: swipe-hint-nudge 2.2s ease-in-out infinite;
     }
 
     .spinner {
@@ -572,7 +645,9 @@
     <section class="card disabled-section" id="sec-guideline">
       <div class="card-title">STEP 3: 行動指針選択</div>
       <p class="guideline-hint">今日意識する指針を1つ選んでください。</p>
-      <div class="guideline-list" id="guidelineList">
+      <p class="guideline-swipe-hint" role="note"><i class="fa-solid fa-left-right" aria-hidden="true"></i> 左右にスワイプしてほかの指針を表示できます</p>
+      <div class="guideline-horizontal-wrap">
+        <div class="guideline-list" id="guidelineList">
         <label class="guideline-option">
           <input type="radio" name="guideline" value="1">
           <div class="guideline-content">
@@ -622,6 +697,9 @@
             <p class="guideline-desc">計画より実践。余白を持ち、柔軟に。今この瞬間を、全力で楽しむ。</p>
           </div>
         </label>
+        </div>
+        <div class="guideline-edge guideline-edge-left" aria-hidden="true"><i class="fa-solid fa-chevron-left"></i></div>
+        <div class="guideline-edge guideline-edge-right" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></div>
       </div>
     </section>
 
@@ -663,7 +741,9 @@
      */
     (function applyLayout() {
       const path = window.location.pathname || '';
-      const layout = path.includes('/horizontal') ? 'horizontal' : 'normal';
+      const q = new URLSearchParams(window.location.search || '');
+      const layout =
+        path.includes('/horizontal') || q.get('layout') === 'horizontal' ? 'horizontal' : 'normal';
       document.body.dataset.layout = layout;
     })();
 
@@ -746,42 +826,48 @@
     let scanning = false;
     let isVerifying = false;
 
-    // --- ABテスト: 水平マーキーレイアウト用セットアップ ---
-    // - guideline-list の中身を guideline-track でラップ
-    // - 同じカード群をもう1セット複製してシームレスにループ
-    // - ホバー / タッチで一時停止（タッチは5秒後に再開）
-    function setupGuidelineMarquee() {
+    // --- 水平レイアウト: タッチで横スクロール、端でヒント更新、ロード時はランダム位置 ---
+    function setupGuidelineHorizontalScroll() {
       if (document.body.dataset.layout !== 'horizontal') return;
       const list = document.getElementById('guidelineList');
       if (!list) return;
-      if (list.querySelector('.guideline-track')) return; // 二重初期化防止
+      if (list.querySelector('.guideline-track')) return;
 
       const originals = Array.from(list.children);
       const track = document.createElement('div');
       track.className = 'guideline-track';
       originals.forEach((node) => track.appendChild(node));
-
-      // シームレスループのためにもう1セット複製
-      originals.forEach((node) => {
-        const clone = node.cloneNode(true);
-        clone.dataset.cloned = 'true';
-        const cloneInput = clone.querySelector('input[name="guideline"]');
-        if (cloneInput) cloneInput.dataset.cloned = 'true';
-        track.appendChild(clone);
-      });
       list.appendChild(track);
 
-      // ホバー/タッチで一時停止
-      let resumeTimer = null;
-      const pause = () => list.classList.add('paused');
-      const resumeLater = (ms) => {
-        clearTimeout(resumeTimer);
-        resumeTimer = setTimeout(() => list.classList.remove('paused'), ms);
-      };
-      list.addEventListener('mouseenter', pause);
-      list.addEventListener('mouseleave', () => list.classList.remove('paused'));
-      list.addEventListener('touchstart', () => { pause(); resumeLater(5000); }, { passive: true });
-      list.addEventListener('pointerdown', () => { pause(); resumeLater(5000); }, { passive: true });
+      const wrap = list.closest('.guideline-horizontal-wrap');
+
+      function updateEdgeHints() {
+        if (!wrap) return;
+        const maxScroll = list.scrollWidth - list.clientWidth;
+        const tol = 6;
+        wrap.classList.toggle('at-start', list.scrollLeft <= tol);
+        wrap.classList.toggle('at-end', maxScroll <= tol || list.scrollLeft >= maxScroll - tol);
+      }
+
+      function scrollGuidelineToRandomStart() {
+        const cards = track.querySelectorAll(':scope > .guideline-option');
+        if (!cards.length) return;
+        const idx = Math.floor(Math.random() * cards.length);
+        const el = cards[idx];
+        const target = el.offsetLeft - (list.clientWidth - el.offsetWidth) / 2;
+        const maxLeft = Math.max(0, list.scrollWidth - list.clientWidth);
+        list.scrollLeft = Math.max(0, Math.min(target, maxLeft));
+        updateEdgeHints();
+      }
+
+      list.addEventListener('scroll', updateEdgeHints, { passive: true });
+      window.addEventListener('resize', updateEdgeHints);
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(scrollGuidelineToRandomStart);
+      });
+
+      window.scrollGuidelineToRandomStart = scrollGuidelineToRandomStart;
     }
 
     // 行動指針が選択された時の共通処理
@@ -795,9 +881,6 @@
         inp.closest('.guideline-option')?.classList.add('selected');
       });
       selectedGuideline = value;
-      // マーキーを完全停止
-      const list = document.getElementById('guidelineList');
-      list?.classList.add('paused');
       secScan.classList.remove('disabled-section');
       scrollToEl(secScan);
       scanStatus.textContent = "「入室」または「退室」を選択してください";
@@ -805,8 +888,7 @@
 
     // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
-      // 水平マーキー化（horizontal レイアウトのみ実施）
-      setupGuidelineMarquee();
+      setupGuidelineHorizontalScroll();
 
       // 複製も含めて全てのラジオに change ハンドラを付与
       document.querySelectorAll('input[name="guideline"]').forEach((input) => {
