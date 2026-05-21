@@ -1027,7 +1027,7 @@
       selectedGuideline = value;
       secScan.classList.remove('disabled-section');
       scrollToEl(secScan);
-      scanStatus.textContent = "「入室」または「退室」を選択してください";
+      if (!scanning) startCamera();
     }
 
     // --- Init ---
