@@ -622,6 +622,7 @@
     <header>
       <h1>KANPAI Hütte</h1>
       <span>Touchless Check-in</span>
+      <span id="locationBadge" style="display:none; font-size:0.72rem; font-weight:700; letter-spacing:0.05em; background:var(--primary); color:#fff; padding:3px 12px; border-radius:20px; margin-top:6px;"></span>
     </header>
 
     <!-- STEP 1: SELECT STAFF -->
@@ -764,15 +765,43 @@
      */
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyhQTmJkmWnft-ZkjmL9zLylmvlkrpTxXFZlnfDICvFqZ5hJMo8DUyK-K2LflGgsulW/exec";
 
-    // URLパラメータまたはGASテンプレートから placeId を取得
-    const urlParams = new URLSearchParams(window.location.search);
-    let placeId = urlParams.get('place') || '';
+    // 拠点ID → 表示名マッピング
+    const PLACE_NAMES = {
+      tokyo:   '東京',
+      niigata: '新潟',
+      nagoya:  '名古屋',
+      fukuoka: '福岡'
+    };
 
-    // GAS環境での埋め込みを優先（存在する場合）
+    // 拠点を検出: URLパス → URLパラメータ → GASテンプレート埋め込みの順
+    const urlParams = new URLSearchParams(window.location.search);
+    let placeId = '';
+
+    // 1) URLパスから検出 (/tokyo/ /niigata/ /nagoya/ /fukuoka/)
+    const _path = window.location.pathname;
+    for (const key of Object.keys(PLACE_NAMES)) {
+      if (_path.includes('/' + key)) { placeId = key; break; }
+    }
+
+    // 2) URLパラメータ ?place=xxx
+    if (!placeId) placeId = urlParams.get('place') || '';
+
+    // 3) GAS環境での埋め込みを優先（存在する場合）
     const embeddedPlaceId = '<?= typeof placeId !== "undefined" ? placeId : "" ?>';
     if (embeddedPlaceId && !embeddedPlaceId.includes('<?=')) {
       placeId = embeddedPlaceId;
     }
+
+    // 拠点バッジを更新
+    (function updateLocationBadge() {
+      const badge = document.getElementById('locationBadge');
+      if (!badge) return;
+      const label = PLACE_NAMES[placeId] || placeId;
+      if (label) {
+        badge.textContent = label + '拠点';
+        badge.style.display = '';
+      }
+    })();
 
     /**
      * GASと通信するヘルパー関数 (JSONPを使用: CORS制限を回避)
