@@ -181,115 +181,56 @@ function verifyStaff(uuid, birthdateStr) {
 }
 
 /**
- * 打刻を記録（セッション型）
- *
- * 入室（type='in'）: 新しい行を追加。退出時間・稼働時間は空のまま。
- * 退出（type='out'）: 同一UUIDで最新の「退出時間が空」の行を探して更新。
- *                    対応する入室行が見つからない場合は退出のみ記録。
- *
- * 打刻記録シートの列順:
- *   A:入室時間 / B:UUID / C:氏名 / D:拠点 / E:退出時間 / F:稼働時間(分) / G:行動指針ID / H:行動指針テキスト
- *
+ * 打刻を記録
  * @param {object} payload
  *   payload = {
  *     uuid: string,
  *     name: string,
- *     placeId: string,       // 'tokyo' | 'niigata' | 'nagoya' | 'fukuoka'
- *     type: string,          // 'in' | 'out'
- *     guidelineId: string,   // 選択した行動指針のID（1〜7）。退室時は空。
- *     guidelineText: string, // 選択した行動指針の文言。退室時は空。
+ *     placeId: string,
+ *     type: string, // 'in' | 'out' など
+ *     qrValue: string, // 実際に読み取ったQRの文字列（ログに残したければ）
+ *     guidelineId: string, // 選択した行動指針のID（1〜7）
+ *     guidelineText: string, // 選択した行動指針の文言
  *   }
+ *
+ * 打刻記録シートの列順:
+ *   timestamp / uuid / name / placeId / type / userAgent / guidelineId / guidelineText
  */
 function recordTimestamp(payload) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(TIMESTAMP_SHEET_NAME);
   if (!sheet) {
-    throw new Error('「' + TIMESTAMP_SHEET_NAME + '」シートが見つかりません');
-  }
-
-  // シートが空ならヘッダー行を自動作成
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(['入室時間', 'UUID', '氏名', '拠点', '退出時間', '稼働時間(分)', '行動指針ID', '行動指針テキスト']);
+    throw new Error('timestamps シートが見つかりません');
   }
 
   const now = new Date();
-  const tz = Session.getScriptTimeZone();
+  const userAgent = Session.getActiveUser().getEmail() || 'unknown';
 
+  sheet.appendRow([
+    now,
+    payload.uuid || '',
+    payload.name || '',
+    payload.placeId || '',
+    payload.type || '',
+    userAgent,
+    payload.guidelineId || '',
+    payload.guidelineText || ''
+  ]);
+
+  // メッセージ生成
+  let message = '';
   if (payload.type === 'in') {
-    // ── 入室: 新しい行を追加（退出時間・稼働時間は空） ──
-    sheet.appendRow([
-      now,                          // A: 入室時間
-      payload.uuid || '',           // B: UUID
-      payload.name || '',           // C: 氏名
-      payload.placeId || '',        // D: 拠点
-      '',                           // E: 退出時間（未入力）
-      '',                           // F: 稼働時間（未入力）
-      payload.guidelineId || '',    // G: 行動指針ID
-      payload.guidelineText || ''   // H: 行動指針テキスト
-    ]);
-
-    return {
-      ok: true,
-      timestamp: Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss'),
-      message: 'おかえり！'
-    };
-
+    message = 'おかえり！';
   } else if (payload.type === 'out') {
-    // ── 退室: 最新の未退出行（退出時間が空）を探して更新 ──
-    const data = sheet.getDataRange().getValues();
-
-    for (let i = data.length - 1; i >= 1; i--) {
-      const row = data[i];
-      const rowUuid  = String(row[1]); // B列: UUID
-      const checkOut = row[4];         // E列: 退出時間
-
-      if (rowUuid === String(payload.uuid) && !checkOut) {
-        // 対応する入室行を発見 → 退出時間・稼働時間を記録
-        const checkIn       = new Date(row[0]);
-        const minutesWorked = Math.round((now - checkIn) / 60000);
-        const rowNumber     = i + 1; // スプレッドシートは1始まり
-
-        sheet.getRange(rowNumber, 5).setValue(now);           // E: 退出時間
-        sheet.getRange(rowNumber, 6).setValue(minutesWorked); // F: 稼働時間(分)
-
-        return {
-          ok: true,
-          timestamp: Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss'),
-          minutesWorked: minutesWorked,
-          message: 'お疲れ！またね！'
-        };
-      }
-    }
-
-    // 対応する入室行が見つからなかった場合: 退出のみ記録
-    sheet.appendRow([
-      '',                           // A: 入室時間（不明）
-      payload.uuid || '',           // B: UUID
-      payload.name || '',           // C: 氏名
-      payload.placeId || '',        // D: 拠点
-      now,                          // E: 退出時間
-      '',                           // F: 稼働時間（不明）
-      '',                           // G: 行動指針ID
-      ''                            // H: 行動指針テキスト
-    ]);
-
-    return {
-      ok: true,
-      timestamp: Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss'),
-      message: 'お疲れ！またね！'
-    };
-
+    message = 'お疲れ！またね！';
   } else {
-    // フォールバック（未知のtype）
-    sheet.appendRow([
-      now, payload.uuid || '', payload.name || '', payload.placeId || '',
-      '', '', payload.guidelineId || '', payload.guidelineText || ''
-    ]);
-    return {
-      ok: true,
-      timestamp: Utilities.formatDate(now, tz, 'yyyy-MM-dd HH:mm:ss'),
-      message: '打刻完了'
-    };
+    message = '打刻完了';
   }
+
+  return {
+    ok: true,
+    timestamp: Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
+    message: message
+  };
 }
 
