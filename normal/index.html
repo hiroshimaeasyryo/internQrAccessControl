@@ -930,7 +930,7 @@
     // --- 1. Staff List ---
     async function initStaffList() {
       try {
-        const list = await callGas('getStaffList');
+        const list = await callGas('getStaffList', { place: placeId });
         renderStaffList(list);
       } catch (err) {
         staffGrid.innerHTML = '<div style="color:red; grid-column:1/-1;">エラー: ' + err.message + '</div>';
@@ -983,10 +983,10 @@
       staffGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 20px; color: var(--text-sub);"><div class="spinner"></div> キャッシュを更新中...</div>';
 
       try {
-        const res = await callGas('clearStaffCache');
+        const res = await callGas('clearStaffCache', { place: placeId });
         if (res.ok) {
           showToast('キャッシュを更新しました', 'success');
-          const list = await callGas('getStaffList');
+          const list = await callGas('getStaffList', { place: placeId });
           btn.classList.remove('spinning');
           renderStaffList(list);
         }
