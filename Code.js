@@ -218,12 +218,18 @@ function placeToBranch_(place) {
 function normalizeBirthdate_(val) {
   if (!val) return '';
   if (typeof val === 'string') {
-    const m = val.match(/^\d{4}-\d{2}-\d{2}/);
-    if (m) return m[0];
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) {
-      return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    // 時刻付きISO/タイムスタンプ(Firestore timestampValue 等)は、UTCの日付を
+    // そのまま拾うと1日ズレるため、スクリプトTZ(Asia/Tokyo)で日付化する。
+    if (val.indexOf('T') >= 0) {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      }
     }
+    // 区切りを '-' に寄せ、先頭の YYYY-MM-DD を取り出す
+    const s = val.replace(/\//g, '-');
+    const m = s.match(/^\d{4}-\d{2}-\d{2}/);
+    if (m) return m[0];
     return String(val);
   }
   try {
